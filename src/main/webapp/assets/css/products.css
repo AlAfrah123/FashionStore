@@ -1,0 +1,170 @@
+/* ================= BASE ================= */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #f3f0ff, #ffffff);
+    margin: 0;
+    padding: 0;
+}
+
+/* ================= HEADER ================= */
+
+.page-header {
+    text-align: center;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+.page-header h2 {
+    margin: 0;
+    color: #222;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* ================= EMPTY STATE ================= */
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #777;
+    font-size: 15px;
+}
+
+/* ================= GRID ================= */
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 24px;
+    padding: 24px;
+
+    align-items: stretch;
+}
+
+/* ================= CARD ================= */
+
+.product-card {
+    background: white;
+    border-radius: 22px;
+    overflow: hidden;
+
+    padding: 16px;
+
+    box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+
+    display: flex;
+    flex-direction: column;
+
+    height: 100%;              /* FIX 1: equal height behavior */
+    transition: all 0.3s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 14px 30px rgba(0,0,0,0.12);
+}
+
+/* ================= IMAGE ================= */
+
+.product-image {
+    height: 220px;
+    background: linear-gradient(135deg, #f3f0ff, #e5dbff);
+    border-radius: 18px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 10px;
+}
+
+/* ================= INFO ================= */
+
+.product-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    flex: 1;
+}
+
+/* TITLE */
+
+.product-title {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    color: #222;
+}
+
+/* DESCRIPTION */
+
+.product-desc {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.4;
+    max-height: 38px;
+    overflow: hidden;
+}
+
+/* ================= PRICE ROW (FIX ADDED) ================= */
+
+.price-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* PRICE */
+
+.price {
+    color: #635BFF;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+/* ================= BUTTON (FIXED ALIGNMENT) ================= */
+
+.btn {
+    margin-top: auto;          /* 🔥 CRITICAL FIX: pushes button to bottom */
+    display: block;
+    width: 100%;
+
+    padding: 10px 12px;
+
+    background: #635BFF;
+    color: white;
+
+    text-decoration: none;
+
+    border-radius: 999px;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    text-align: center;
+
+    transition: all 0.3s ease;
+
+    box-sizing: border-box;
+}
+
+.btn:hover {
+    background: #4f46e5;
+    transform: translateY(-2px);
+}
