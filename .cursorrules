@@ -1,0 +1,58 @@
+# FashionStore — Cursor rules (MVC + stack lock-in)
+
+## Role
+You are a senior full-stack developer working on this codebase. Prefer small, reviewable changes that match existing patterns.
+
+## Tech stack (do not substitute)
+- **Language:** Java 21
+- **Web:** Jakarta Servlet API 6, JSP + JSTL (`jakarta.*`), WAR deployed to Tomcat 10+
+- **Data:** MySQL via JDBC (`mysql-connector-j`); no ORM unless the project already adds one
+- **Build:** Maven (`pom.xml`)
+
+Do **not** add new libraries or frameworks (Spring, Hibernate, Express, EJS, MongoDB, etc.) without explicit user approval.
+
+## Architecture — strict MVC for this project
+| Layer | Location | Responsibility |
+|-------|----------|------------------|
+| **Controller** | `src/main/java/com/fashionstore/controller/*Servlet.java` | HTTP handling: read `HttpServletRequest` params, call DAO/services, `setAttribute`, forward to JSP. Minimal logic; no SQL here. |
+| **Model** | `src/main/java/com/fashionstore/model/*.java` | POJOs / domain types only (fields, getters/setters). No JDBC. |
+| **Data access** | `src/main/java/com/fashionstore/dao/*.java` and `.../dao/impl/*DAOImpl.java` | SQL, `PreparedStatement`, mapping rows to models. |
+| **View** | `src/main/webapp/WEB-INF/views/**/*.jsp` (+ `partials/`) | Presentation only; no business rules or DB access. |
+
+- Routing uses `@WebServlet("/path")` on servlet classes (see `HomeServlet`, `ProductServlet`). Do not move routing into JSP or static HTML for new features unless the project already does.
+- **Do not** put business rules or SQL in JSP, `web.xml`, or static `index.html`.
+
+## Consistency checklist (match existing controllers)
+Before changing behavior, read **`HomeServlet`**, **`ProductServlet`**, and related DAOs. Then:
+- Use the same package imports, `init()` DAO wiring style, and `doGet` / `doPost` structure.
+- Use `request.setAttribute(...)` names that JSPs already expect; add new attributes with clear, consistent names.
+- Forward with `request.getRequestDispatcher("/WEB-INF/views/....jsp").forward(request, response)`.
+- Validate and sanitize request parameters (e.g. `categoryId` parsing pattern in `ProductServlet`).
+
+## Product listing — URL-state sorting (Flipkart-style)
+- Read sort from the query string, e.g. `request.getParameter("sort")` on `/products` (alongside existing `categoryId` and `query`).
+- Supported values should map to DB ordering, e.g. `popularity`, `price_asc`, `price_desc`, `newest` (exact names to align with JSP form/links).
+- Implement ordering in **`ProductDAO` / `ProductDAOImpl`** (or a dedicated query method), not in the JSP.
+- Update **`products.jsp`** with a sort bar that **preserves** `categoryId` / `query` when changing `sort` (same URL state pattern as multi-filter pages).
+
+## Cart and favorites
+- The project already has **`Cart`**, **`CartItem`**, and cart DAOs — **extend** them; do not invent a parallel cart model unless necessary.
+- Cart operations must handle:
+  - Duplicate adds → increment quantity on existing line, do not duplicate rows.
+  - Quantity capped by available stock (use the product/variant field the schema already uses, e.g. stock / `stock_count` — verify in DB/model).
+  - Subtotal and grand total; apply tax/shipping only if the user specifies percentages/fees (configurable constants in one place, e.g. servlet or small helper **used only from controllers**, not JSP).
+- Persistence: prefer **session-backed cart** for guests or **DB-linked cart** if user sessions/login exist — follow whatever the DAOs already imply; do not introduce Redis, etc., without approval.
+
+## Security and robustness
+- Wrap DAO / JDBC calls in **`try/catch`** in the servlet (or a thin service if one already exists); do not let stack traces leak to users.
+- Add or reuse a **global error handler** appropriate to this stack (e.g. `error-page` in `web.xml` and/or a servlet `Filter`) if the user asks for production hardening.
+- Never pass secrets, full exception messages, or raw internal IDs unnecessarily to JSP; use DTOs or minimal attributes for the view.
+
+## Workflow for new features
+1. Scan `com.fashionstore.model`, `com.fashionstore.dao` (and `impl`), and `com.fashionstore.controller`, plus the target JSPs.
+2. **Propose** the list of files to touch and the public behavior (URLs, parameters, attributes) **before** writing code.
+3. Implement with the smallest diff that satisfies the spec.
+
+## Out of scope unless requested
+- Rewrites to Spring, JPA, front-end SPA frameworks, or new templating engines.
+- Large refactors unrelated to the current task.

@@ -10,13 +10,15 @@ public class OrderItem {
     private double unitPrice;
     private double subtotal;
     private String sizeLabel;
+    /** FK to {@link ProductSize#productSizeId}; required for relational integrity with variants. */
+    private int productSizeId;
 
     public OrderItem() {}
 
     public OrderItem(int orderItemId, int orderId, int productId,
                      String productName, int quantity,
                      double unitPrice, double subtotal,
-                     String sizeLabel) {
+                     String sizeLabel, int productSizeId) {
         this.orderItemId = orderItemId;
         this.orderId = orderId;
         this.productId = productId;
@@ -25,6 +27,16 @@ public class OrderItem {
         this.unitPrice = unitPrice;
         this.subtotal = subtotal;
         this.sizeLabel = sizeLabel;
+        this.productSizeId = productSizeId;
+    }
+
+    /** Legacy constructor mapping to {@link #productSizeId} unset (null in DB layer). */
+    public OrderItem(int orderItemId, int orderId, int productId,
+                     String productName, int quantity,
+                     double unitPrice, double subtotal,
+                     String sizeLabel) {
+
+        this(orderItemId, orderId, productId, productName, quantity, unitPrice, subtotal, sizeLabel, 0);
     }
 
     public int getOrderItemId() {
@@ -90,7 +102,15 @@ public class OrderItem {
     public void setSizeLabel(String sizeLabel) {
         this.sizeLabel = sizeLabel;
     }
-    
+
+    public int getProductSizeId() {
+        return productSizeId;
+    }
+
+    public void setProductSizeId(int productSizeId) {
+        this.productSizeId = productSizeId;
+    }
+
     @Override
     public String toString() {
         return "OrderItem{" +
@@ -102,6 +122,7 @@ public class OrderItem {
                 ", unitPrice=" + unitPrice +
                 ", subtotal=" + subtotal +
                 ", sizeLabel='" + sizeLabel + '\'' +
+                ", productSizeId=" + productSizeId +
                 '}';
     }
 }

@@ -44,6 +44,9 @@ public class ProductVariantDAOImpl implements ProductVariantDAO {
     private static final String REDUCE_STOCK =
             "UPDATE product_sizes SET stock_quantity = stock_quantity - ? WHERE product_size_id=? AND stock_quantity >= ?";
 
+    private static final String INCREMENT_STOCK =
+            "UPDATE product_sizes SET stock_quantity = stock_quantity + ? WHERE product_size_id=?";
+
     private static final String CHECK_VARIANT =
             "SELECT product_size_id FROM product_sizes WHERE product_id=? AND size_label=?";
 
@@ -220,6 +223,28 @@ public class ProductVariantDAOImpl implements ProductVariantDAO {
             ps.setInt(1, quantity);
             ps.setInt(2, productSizeId);
             ps.setInt(3, quantity);
+
+            return ps.executeUpdate() > 0;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean incrementStock(int productSizeId, int quantity) {
+
+        if (quantity <= 0) {
+            return true;
+        }
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(INCREMENT_STOCK)) {
+
+            ps.setInt(1, quantity);
+            ps.setInt(2, productSizeId);
 
             return ps.executeUpdate() > 0;
 

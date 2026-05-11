@@ -5,6 +5,8 @@ import com.fashionstore.model.OrderItem;
 import com.fashionstore.util.DBConnection;
 
 import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Types;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
@@ -17,7 +19,7 @@ public class OrderItemDAOImpl implements OrderItemDAO {
     // =========================
 
     private static final String INSERT_ITEM =
-            "INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, subtotal, size_label) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            "INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, subtotal, size_label, product_size_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final String SELECT_BY_ID =
             "SELECT * FROM order_items WHERE order_item_id=?";
@@ -51,6 +53,7 @@ public class OrderItemDAOImpl implements OrderItemDAO {
             ps.setDouble(5, item.getUnitPrice());
             ps.setDouble(6, item.getSubtotal());
             ps.setString(7, item.getSizeLabel());
+            bindProductSizeForeignKey(ps, 8, item);
 
             return ps.executeUpdate() > 0;
 
@@ -65,34 +68,66 @@ public class OrderItemDAOImpl implements OrderItemDAO {
     @Override
     public boolean addOrderItems(List<OrderItem> items) {
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(INSERT_ITEM)) {
+        if (items == null || items.isEmpty()) {
+            return true;
+        }
 
+        Connection conn = null;
+
+        try {
+            conn = DBConnection.getConnection();
             conn.setAutoCommit(false);
 
-            for (OrderItem item : items) {
+            try (PreparedStatement ps = conn.prepareStatement(INSERT_ITEM)) {
 
-                ps.setInt(1, item.getOrderId());
-                ps.setInt(2, item.getProductId());
-                ps.setString(3, item.getProductName());
-                ps.setInt(4, item.getQuantity());
-                ps.setDouble(5, item.getUnitPrice());
-                ps.setDouble(6, item.getSubtotal());
-                ps.setString(7, item.getSizeLabel());
+                for (OrderItem item : items) {
 
-                ps.addBatch();
+                    ps.setInt(1, item.getOrderId());
+                    ps.setInt(2, item.getProductId());
+                    ps.setString(3, item.getProductName());
+                    ps.setInt(4, item.getQuantity());
+                    ps.setDouble(5, item.getUnitPrice());
+                    ps.setDouble(6, item.getSubtotal());
+                    ps.setString(7, item.getSizeLabel());
+                    bindProductSizeForeignKey(ps, 8, item);
+
+                    ps.addBatch();
+                }
+
+                ps.executeBatch();
             }
 
-            ps.executeBatch();
             conn.commit();
 
             return true;
 
         } catch (Exception e) {
             e.printStackTrace();
-        }
 
-        return false;
+            if (conn != null) {
+
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+
+            return false;
+
+        } finally {
+
+            if (conn != null) {
+
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
     }
 
     @Override
@@ -211,6 +246,35 @@ public class OrderItemDAOImpl implements OrderItemDAO {
         item.setSubtotal(rs.getDouble("subtotal"));
         item.setSizeLabel(rs.getString("size_label"));
 
+        int productSizeFk = rs.getInt("product_size_id");
+
+        if (rs.wasNull()) {
+
+            item.setProductSizeId(0);
+
+        } else {
+
+            item.setProductSizeId(productSizeFk);
+        }
+
         return item;
+    }
+
+    /**
+     * Persist variant FK; {@code <= 0} sends SQL NULL for legacy tooling without a SKU row mapped.
+     */
+    private static void bindProductSizeForeignKey(PreparedStatement ps, int index, OrderItem item)
+            throws SQLException {
+
+        int vid = item.getProductSizeId();
+
+        if (vid > 0) {
+
+            ps.setInt(index, vid);
+
+        } else {
+
+            ps.setNull(index, Types.INTEGER);
+        }
     }
 }

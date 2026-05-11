@@ -11,12 +11,14 @@ import com.fashionstore.dao.impl.ProductDAOImpl;
 
 import com.fashionstore.model.Category;
 import com.fashionstore.model.Product;
+import com.fashionstore.util.AuthConstants;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 @WebServlet("/home")
 public class HomeServlet extends HttpServlet {
@@ -39,6 +41,19 @@ public class HomeServlet extends HttpServlet {
                          HttpServletResponse response)
             throws ServletException, IOException {
 
+        HttpSession session = request.getSession(false);
+
+        if (session != null) {
+
+            Object welcome = session.getAttribute(AuthConstants.FLASH_LOGIN);
+
+            if (welcome instanceof String s && !s.isBlank()) {
+
+                request.setAttribute("flashMessage", s);
+                session.removeAttribute(AuthConstants.FLASH_LOGIN);
+            }
+        }
+
         // FETCH PRODUCTS
         List<Product> products = productDAO.getAllProducts();
 
@@ -48,6 +63,7 @@ public class HomeServlet extends HttpServlet {
         // SEND DATA TO JSP
         request.setAttribute("products", products);
         request.setAttribute("categories", categories);
+        request.setAttribute("activeNav", "home");
 
         // FORWARD TO HOME PAGE
         request.getRequestDispatcher("/WEB-INF/views/home.jsp")

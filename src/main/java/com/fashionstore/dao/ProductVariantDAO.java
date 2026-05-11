@@ -23,5 +23,8 @@ public interface ProductVariantDAO {
 
     boolean reduceStock(int productSizeId, int quantity);
 
+    /** Restores quantity (e.g. checkout rollback). */
+    boolean incrementStock(int productSizeId, int quantity);
+
     boolean variantExists(int productId, String sizeLabel);
 }

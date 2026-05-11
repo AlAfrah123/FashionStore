@@ -114,6 +114,7 @@ public class DaoLayerTestApp {
             oi.setUnitPrice(ci.getUnitPrice());
             oi.setSubtotal(ci.getQuantity() * ci.getUnitPrice());
             oi.setSizeLabel(ci.getSizeLabel());
+            oi.setProductSizeId(1);
 
             orderItemDAO.addOrderItem(oi);
         }

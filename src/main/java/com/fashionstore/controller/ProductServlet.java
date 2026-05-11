@@ -1,8 +1,12 @@
 package com.fashionstore.controller;
 
+import com.fashionstore.dao.CategoryDAO;
 import com.fashionstore.dao.ProductDAO;
+import com.fashionstore.dao.impl.CategoryDAOImpl;
 import com.fashionstore.dao.impl.ProductDAOImpl;
+import com.fashionstore.model.Category;
 import com.fashionstore.model.Product;
+import com.fashionstore.model.ProductSortOption;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -17,10 +21,12 @@ import java.util.List;
 public class ProductServlet extends HttpServlet {
 
     private ProductDAO productDAO;
+    private CategoryDAO categoryDAO;
 
     @Override
     public void init() {
         productDAO = new ProductDAOImpl();
+        categoryDAO = new CategoryDAOImpl();
     }
 
     @Override
@@ -29,26 +35,48 @@ public class ProductServlet extends HttpServlet {
 
         String categoryIdParam = request.getParameter("categoryId");
         String query = request.getParameter("query");
+        ProductSortOption sort = ProductSortOption.fromRequestParam(request.getParameter("sort"));
 
-        List<Product> products;
+        String currentSortSlug =
+                switch (sort) {
 
-        if (query != null && !query.trim().isEmpty()) {
-            products = productDAO.getProductsByName(query.trim());
+                    case POPULARITY -> "popularity";
 
-        } else if (categoryIdParam != null && !categoryIdParam.isBlank()) {
+                    case PRICE_ASC -> "price_asc";
+
+                    case PRICE_DESC -> "price_desc";
+
+                    case NEWEST -> "newest";
+                };
+
+        request.setAttribute("currentSort", currentSortSlug);
+
+        Integer categoryIdObj = null;
+
+        if (categoryIdParam != null && !categoryIdParam.isBlank()) {
+
             try {
-                int categoryId = Integer.parseInt(categoryIdParam.trim());
-                products = productDAO.getProductsByCategoryId(categoryId);
-            } catch (NumberFormatException e) {
-                products = productDAO.getAllProducts();
-            }
+                categoryIdObj = Integer.valueOf(categoryIdParam.trim());
 
-        } else {
-            products = productDAO.getAllProducts();
+            } catch (NumberFormatException e) {
+
+                categoryIdObj = null;
+            }
         }
 
+        String trimmedQuery =
+                query != null && !query.trim().isEmpty()
+                        ? query.trim()
+                        : null;
+
+        List<Product> products = productDAO.findProducts(categoryIdObj, trimmedQuery, sort);
+
         request.setAttribute("products", products);
+        request.setAttribute("productCount", products.size());
         request.setAttribute("activeCategoryId", categoryIdParam);
+
+        request.setAttribute("categories", categoryDAO.getAllCategories());
+        request.setAttribute("activeNav", "products");
 
         request.getRequestDispatcher("/WEB-INF/views/products.jsp")
                .forward(request, response);

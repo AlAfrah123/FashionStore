@@ -2,6 +2,7 @@ package com.fashionstore.dao.impl;
 
 import com.fashionstore.dao.ProductDAO;
 import com.fashionstore.model.Product;
+import com.fashionstore.model.ProductSortOption;
 import com.fashionstore.util.DBConnection;
 
 import java.sql.*;
@@ -34,8 +35,18 @@ public class ProductDAOImpl implements ProductDAO {
     private static final String DELETE_PRODUCT =
             "DELETE FROM products WHERE product_id=?";
 
+    private static final String EXISTS_BY_ID =
+            "SELECT 1 FROM products WHERE product_id=? LIMIT 1";
+
     private static final String GET_ACTIVE =
             "SELECT * FROM products WHERE is_active = TRUE";
+
+    private static final String GET_DISCOUNTED =
+            "SELECT * FROM products WHERE discount_percent > 0 ORDER BY discount_percent DESC";
+
+    /** Mirrors {@link Product#getFinalPrice()} in SQL for ORDER BY sorting. */
+    private static final String EFFECTIVE_PRICE_SQL =
+            "(price - (price * LEAST(GREATEST(COALESCE(discount_percent,0),0),100) / 100.0))";
 
     @Override
     public List<Product> getAllProducts() {
@@ -74,6 +85,23 @@ public class ProductDAOImpl implements ProductDAO {
         }
 
         return null;
+    }
+
+    @Override
+    public boolean productExists(int productId) {
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(EXISTS_BY_ID)) {
+
+            ps.setInt(1, productId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Error checking product existence", e);
+        }
     }
 
     @Override
@@ -164,6 +192,80 @@ public class ProductDAOImpl implements ProductDAO {
         }
 
         return list;
+    }
+
+    @Override
+    public List<Product> getDiscountedProducts() {
+
+        List<Product> list = new ArrayList<>();
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(GET_DISCOUNTED);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                list.add(mapProduct(rs));
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Error fetching discounted products", e);
+        }
+
+        return list;
+    }
+
+    @Override
+    public List<Product> findProducts(Integer categoryId, String nameQuery, ProductSortOption sortOption) {
+
+        StringBuilder sql = new StringBuilder(
+                "SELECT product_id, category_id, product_name, description, price, discount_percent, image_url, is_active "
+                        + "FROM products WHERE 1=1 ");
+        List<Object> params = new ArrayList<>();
+
+        if (categoryId != null) {
+            sql.append(" AND category_id=? ");
+            params.add(categoryId);
+        }
+
+        if (nameQuery != null && !nameQuery.isBlank()) {
+            sql.append(" AND product_name LIKE ? ");
+            params.add("%" + nameQuery.trim() + "%");
+        }
+
+        sql.append(sortClause(sortOption == null ? ProductSortOption.POPULARITY : sortOption));
+
+        List<Product> results = new ArrayList<>();
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+
+                while (rs.next()) {
+                    results.add(mapProduct(rs));
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Error querying products with filters/sort", e);
+        }
+
+        return results;
+    }
+
+    private String sortClause(ProductSortOption sort) {
+
+        return switch (sort) {
+            case PRICE_ASC -> " ORDER BY " + EFFECTIVE_PRICE_SQL + " ASC, product_id ASC ";
+            case PRICE_DESC -> " ORDER BY " + EFFECTIVE_PRICE_SQL + " DESC, product_id DESC ";
+            case NEWEST -> " ORDER BY product_id DESC ";
+            case POPULARITY ->
+                    " ORDER BY discount_percent DESC, product_id DESC ";
+        };
     }
 
     @Override

@@ -1,6 +1,8 @@
 package com.fashionstore.dao;
 
 import com.fashionstore.model.Product;
+import com.fashionstore.model.ProductSortOption;
+
 import java.util.List;
 
 public interface ProductDAO {
@@ -26,4 +28,10 @@ public interface ProductDAO {
     List<Product> getDiscountedProducts();
 
     boolean productExists(int productId);
+
+    /**
+     * Filtered listings for the catalog ({@code ProductServlet}).
+     * {@code categoryId} and {@code nameQuery} optional; sorting applied in persistence layer.
+     */
+    List<Product> findProducts(Integer categoryId, String nameQuery, ProductSortOption sortOption);
 }
